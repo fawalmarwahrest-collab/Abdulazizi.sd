@@ -35,6 +35,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3); font-weight: bold; opacity: 0; transition: opacity 0.3s;
         }
         #customToast.show { visibility: visible; opacity: 1; bottom: 100px; }
+        .input-error { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
         @media print { body * { visibility: hidden; } #printArea, #printArea * { visibility: visible; } #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; } }
     </style>
 </head>
@@ -76,7 +77,7 @@
     </div>
 
     <nav class="fixed bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-md flex justify-around items-center z-[1100] px-6 border-t border-slate-100">
-        <a href="https://maps.app.goo.gl/3" class="flex flex-col items-center gap-1 text-slate-400">
+        <a href="https://maps.app.goo.gl/tEYAfPAv9CmiXkEX6" class="flex flex-col items-center gap-1 text-slate-400">
             <i class="fa-solid fa-map-pin text-xl"></i><span class="text-[9px] font-black">موقعنا</span>
         </a>
         <button id="pwaInstallBtn" onclick="handleInstall()" class="w-16 h-16 bg-blue-700 text-white rounded-full -mt-10 border-[5px] border-white shadow-2xl flex flex-col items-center justify-center transform active:scale-90 transition">
@@ -122,14 +123,7 @@
 
         window.onload = () => {
             renderTabs(); renderItems(); updateCartDisplay(); if(isNeighbor) setNeighborUI();
-            
-            // تهيئة نظام التثبيت
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-            });
-            
-            // نظام الرجوع بالهاتف
+            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
             history.pushState(null, null, window.location.pathname);
             window.addEventListener('popstate', function () {
                 if (document.getElementById('mainModal').style.display === 'flex') {
@@ -142,13 +136,8 @@
         };
 
         async function handleInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') deferredPrompt = null;
-            } else {
-                showToast("التطبيق مثبت أو متصفحك لا يدعم التثبيت المباشر ✅");
-            }
+            if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') deferredPrompt = null; }
+            else { showToast("التطبيق مثبت أو متصفحك لا يدعم التثبيت المباشر ✅"); }
         }
 
         function renderTabs() {
@@ -210,7 +199,7 @@
                     <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black">مراجعة طلبي</h2><button onclick="saveAsFavorite()" class="bg-red-50 text-red-600 px-4 py-2 rounded-2xl font-bold text-xs">❤️ مفضل</button></div>
                     <div class="space-y-4 mb-8">${cart.map(i => `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-3xl"><div><h4 class="font-black">${i.name}</h4><p class="text-xs text-blue-600">${i.price * i.qty}﷼</p></div><div class="flex items-center gap-3"><button onclick="updateQty(${i.id}, -1, '', 0, '${i.size}')" class="w-9 h-9 bg-white text-red-500 rounded-xl shadow-sm font-black">-</button><span class="font-black">${i.qty}</span><button onclick="updateQty(${i.id}, 1, '', 0, '${i.size}')" class="w-9 h-9 bg-blue-700 text-white rounded-xl shadow-sm font-black">+</button></div></div>`).join('')}</div>
                     <div class="bg-blue-50/50 p-6 rounded-[35px] space-y-4 mb-6">
-                        ${isNeighbor ? `<input type="text" id="custName" placeholder="الاسم" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><input type="text" id="custLoc" placeholder="رقم المنزل" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold">` : ''}
+                        ${isNeighbor ? `<input type="text" id="custName" placeholder="الاسم الكامل" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold transition-all"><input type="text" id="custLoc" placeholder="وصف المنزل (مثال: مقابل المسجد)" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold transition-all">` : ''}
                         <div class="grid grid-cols-2 gap-2">
                             ${!isNeighbor ? `<select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري 🥡">🥡 سفري</option><option value="محلي 🍽️">🍽️ محلي</option></select>` : ''}
                             <select id="payWay" class="${isNeighbor?'col-span-2':'col-span-1'} p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش 💵">كاش 💵</option><option value="شبكة 💳">شبكة 💳</option></select>
@@ -225,14 +214,35 @@
         function confirmAndSend() {
             const payMethod = document.getElementById('payWay').value;
             const orderType = isNeighbor ? "توصيل حي بدر 🏠" : document.getElementById('oType').value;
-            if(isNeighbor){ localStorage.setItem('u_name', document.getElementById('custName').value); localStorage.setItem('u_loc', document.getElementById('custLoc').value); }
+            
+            if(isNeighbor){
+                const nameInp = document.getElementById('custName');
+                const locInp = document.getElementById('custLoc');
+                if(!nameInp.value.trim() || !locInp.value.trim()){
+                    if(!nameInp.value.trim()) nameInp.classList.add('input-error');
+                    if(!locInp.value.trim()) locInp.classList.add('input-error');
+                    showToast("يرجى تعبئة بيانات العنوان أولاً ⚠️");
+                    return;
+                }
+                localStorage.setItem('u_name', nameInp.value);
+                localStorage.setItem('u_loc', locInp.value);
+            }
+
+            const isFirstOrder = !localStorage.getItem('hasOrderedBefore');
             saveToHistory(orderType, payMethod);
             const lastLog = JSON.parse(localStorage.getItem('m_logs'))[0];
+            
             let msg = `*طلب جديد - فوال مروه*%0A🆔 *ID:* ${lastLog.id}%0A📢 *النوع:* ${orderType}%0A💰 *الدفع:* ${payMethod}%0A`;
             if(isNeighbor) msg += `👤 *العميل:* ${document.getElementById('custName').value}%0A🏠 *المنزل:* ${document.getElementById('custLoc').value}%0A`;
             msg += `--------------------------%0A`;
             cart.forEach(i => msg += `• ${i.name} [${i.qty}] = ${i.price * i.qty}﷼%0A`);
             msg += `--------------------------%0A💰 *الإجمالي: ${cart.reduce((s,i)=>s+(i.price*i.qty),0)}﷼*`;
+            
+            if(isFirstOrder && isNeighbor) {
+                msg += `%0A%0A📍 *ملاحظة: بما أن هذا طلبي الأول، سأرسل لكم موقعي الحالي الآن*`;
+                localStorage.setItem('hasOrderedBefore', 'true');
+            }
+
             window.location.href = `https://wa.me/966530195433?text=${msg}`;
             cart = []; updateCartDisplay(); closeModal(); renderItems();
         }
