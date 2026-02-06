@@ -20,7 +20,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .active-tab { background-color: #1e40af; color: white; transform: scale(1.05); }
         .meal-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #f3f4f6; }
@@ -28,7 +28,7 @@
         .cart-badge { animation: pop 0.3s ease-out; }
         @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
         
-        /* تنسيق الإشعار العصري */
+        /* تنسيق الإشعار العصري الجديد */
         #toast {
             visibility: hidden;
             min-width: 250px;
@@ -45,17 +45,14 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             font-weight: bold;
         }
-        #toast.show {
-            visibility: visible;
-            animation: fadein 0.5s, fadeout 0.5s 2.5s;
-        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; left: 0; top: 0; width: 80mm; padding: 5mm; }
+            #printArea { position: absolute; left: 0; top: 0; width: 80mm; padding: 5mm; background: white; }
         }
     </style>
 </head>
@@ -107,7 +104,7 @@
 
     <div id="cartSidebar" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleCart()"></div>
-        <div class="absolute left-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col animate-slide-left">
+        <div class="absolute left-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col">
             <div class="p-4 border-b flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-lg text-blue-900"><i class="fas fa-shopping-cart ml-2"></i>سلة الطلبات</h3>
                 <button onclick="toggleCart()" class="text-gray-500 text-2xl">&times;</button>
@@ -179,7 +176,7 @@
     <div id="printArea" class="hidden text-black font-mono"></div>
 
     <script>
-        // الأصناف الكاملة كما هي في ملفك الأصلي دون أي حذف
+        // استرجاع كافة الأصناف كاملة دون أي حذف
         const DB = [
             { id: 1, name: "فول مروه سادة", price: 9, cat: "فول", img: "🍲" },
             { id: 2, name: "فول مروه بالسمن", price: 11, cat: "فول", img: "🥣" },
@@ -206,8 +203,8 @@
         let cart = [];
         let currentCat = "الكل";
         let isNeighbor = false;
+        let favs = JSON.parse(localStorage.getItem('m_favs') || '[]');
 
-        // وظيفة الإشعار العصري
         function showToast(text) {
             const toast = document.getElementById("toast");
             toast.innerText = text;
@@ -215,20 +212,13 @@
             setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        // منطق زر الرجوع
         function handleBack() {
-            if (!document.getElementById('cartSidebar').classList.contains('hidden')) {
-                toggleCart();
-            } else if (!document.getElementById('historyModal').classList.contains('hidden')) {
-                closeHistory();
-            } else if (!document.getElementById('neighborModal').classList.contains('hidden')) {
-                document.getElementById('neighborModal').classList.add('hidden');
-            } else {
-                if (confirm("هل أنت متأكد من رغبتك في الخروج من التطبيق؟")) {
-                    window.history.back();
-                } else {
-                    history.pushState(null, null, window.location.pathname);
-                }
+            if (!document.getElementById('cartSidebar').classList.contains('hidden')) { toggleCart(); }
+            else if (!document.getElementById('historyModal').classList.contains('hidden')) { closeHistory(); }
+            else if (!document.getElementById('neighborModal').classList.contains('hidden')) { document.getElementById('neighborModal').classList.add('hidden'); }
+            else {
+                if (confirm("هل أنت متأكد من رغبتك في الخروج من التطبيق؟")) { window.history.back(); }
+                else { history.pushState(null, null, window.location.pathname); }
             }
         }
 
@@ -240,26 +230,29 @@
         };
 
         function renderCategories() {
-            const cats = ["الكل", ...new Set(DB.map(i => i.cat))];
+            const cats = ["الكل", "المفضلة", ...new Set(DB.map(i => i.cat))];
             const list = document.getElementById('categoryList');
             list.innerHTML = cats.map(c => `
-                <button onclick="filterCat('${c}')" class="px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap shadow-sm border transition-all ${currentCat===c?'active-tab':'bg-white text-gray-600 border-gray-100 hover:bg-gray-50'}">
-                    ${c}
+                <button onclick="filterCat('${c}')" class="px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap shadow-sm border transition-all ${currentCat===c?'active-tab':'bg-white text-gray-600 border-gray-100'}">
+                    ${c === "المفضلة" ? '⭐ ' + c : c}
                 </button>
             `).join('');
         }
 
-        function filterCat(c) {
-            currentCat = c;
-            renderCategories();
-            renderItems();
-        }
+        function filterCat(c) { currentCat = c; renderCategories(); renderItems(); }
 
         function renderItems() {
             const grid = document.getElementById('itemsGrid');
-            const items = currentCat === "الكل" ? DB : DB.filter(i => i.cat === currentCat);
+            let items = [];
+            if (currentCat === "الكل") items = DB;
+            else if (currentCat === "المفضلة") items = DB.filter(i => favs.includes(i.id));
+            else items = DB.filter(i => i.cat === currentCat);
+
             grid.innerHTML = items.map(i => `
-                <div class="meal-card bg-white p-3 rounded-3xl relative overflow-hidden flex flex-col shadow-sm">
+                <div class="meal-card bg-white p-3 rounded-3xl relative flex flex-col shadow-sm">
+                    <button onclick="toggleFav(${i.id})" class="absolute top-2 right-2 z-10 text-lg">
+                        <i class="${favs.includes(i.id)?'fas fa-star text-yellow-400':'far fa-star text-gray-300'}"></i>
+                    </button>
                     <div class="h-24 flex items-center justify-center text-4xl mb-2 bg-gray-50 rounded-2xl">${i.img}</div>
                     <h3 class="font-bold text-xs text-blue-900 mb-1 line-clamp-1">${i.name}</h3>
                     <div class="flex justify-between items-center mt-auto">
@@ -270,6 +263,14 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        function toggleFav(id) {
+            if (favs.includes(id)) favs = favs.filter(f => f !== id);
+            else favs.push(id);
+            localStorage.setItem('m_favs', JSON.stringify(favs));
+            renderItems();
+            renderCategories();
         }
 
         function addToCart(id) {
@@ -287,24 +288,19 @@
             const total = document.getElementById('cartTotal');
             const totalQty = cart.reduce((s, i) => s + i.qty, 0);
             const totalCash = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-
             count.innerText = totalQty;
             count.classList.toggle('hidden', totalQty === 0);
             total.innerText = totalCash + "﷼";
-
             list.innerHTML = cart.map(i => `
                 <div class="flex items-center justify-between bg-white p-3 rounded-2xl border-b">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">${i.img}</div>
-                        <div>
-                            <h4 class="font-bold text-sm text-blue-900">${i.name}</h4>
-                            <p class="text-xs text-blue-600 font-bold">${i.price}﷼</p>
-                        </div>
+                        <div><h4 class="font-bold text-sm text-blue-900">${i.name}</h4><p class="text-xs text-blue-600 font-bold">${i.price}﷼</p></div>
                     </div>
                     <div class="flex items-center gap-3 bg-gray-100 rounded-xl px-2 py-1">
-                        <button onclick="changeQty(${i.id}, -1)" class="w-6 h-6 flex items-center justify-center text-blue-600"><i class="fas fa-minus text-[10px]"></i></button>
+                        <button onclick="changeQty(${i.id}, -1)" class="w-6 h-6 flex items-center justify-center"><i class="fas fa-minus text-[10px]"></i></button>
                         <span class="font-bold text-sm w-4 text-center">${i.qty}</span>
-                        <button onclick="changeQty(${i.id}, 1)" class="w-6 h-6 flex items-center justify-center text-blue-600"><i class="fas fa-plus text-[10px]"></i></button>
+                        <button onclick="changeQty(${i.id}, 1)" class="w-6 h-6 flex items-center justify-center"><i class="fas fa-plus text-[10px]"></i></button>
                     </div>
                 </div>
             `).join('');
@@ -317,22 +313,15 @@
             updateCartDisplay();
         }
 
-        function toggleCart() {
-            document.getElementById('cartSidebar').classList.toggle('hidden');
-        }
+        function toggleCart() { document.getElementById('cartSidebar').classList.toggle('hidden'); }
 
-        function activateNeighbor() {
-            isNeighbor = true;
-            document.getElementById('neighborModal').classList.add('hidden');
-            showToast("تم تفعيل ميزة سكان حي بدر ✅");
-        }
+        function activateNeighbor() { isNeighbor = true; document.getElementById('neighborModal').classList.add('hidden'); showToast("تم تفعيل ميزة حي بدر ✅"); }
 
         function confirmAndSend() {
             if (!cart.length) return showToast("السلة فارغة!");
             saveToHistory();
-            const info = isNeighbor ? `%0A📍 *العنوان:* سكان حي بدر` : '';
             const lastLog = JSON.parse(localStorage.getItem('m_logs'))[0];
-            let msg = `*طلب جديد - فوال مروه*%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${document.getElementById('oType').value}${info}%0A--------------------------%0A`;
+            let msg = `*طلب جديد - فوال مروه*%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${document.getElementById('oType').value}${isNeighbor?'%0A📍 *حي بدر*':''}%0A💳 *الدفع:* ${document.getElementById('payWay').value}%0A--------------------------%0A`;
             cart.forEach(i => msg += `• ${i.name} [${i.qty}] = ${i.price * i.qty}﷼%0A`);
             msg += `--------------------------%0A💰 *الإجمالي: ${cart.reduce((s,i)=>s+(i.price*i.qty),0)}﷼*`;
             window.location.href = `https://wa.me/966530195433?text=${msg}`;
@@ -342,8 +331,7 @@
         function saveToHistory() {
             let logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
             const generateID = () => Math.floor(100000 + Math.random() * 900000);
-            let newID = generateID();
-            logs.unshift({ id: newID, date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
+            logs.unshift({ id: generateID(), date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
             localStorage.setItem('m_logs', JSON.stringify(logs.slice(0, 30)));
         }
 
@@ -355,58 +343,53 @@
             content.innerHTML = logs.map(l => `
                 <div class="bg-white p-4 rounded-2xl border-r-4 border-blue-900 shadow-sm">
                     <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <span class="text-[10px] text-gray-400 block">${l.date}</span>
-                            <span class="font-black text-blue-900 text-sm">طلب #${l.id}</span>
-                        </div>
+                        <div><span class="text-[10px] text-gray-400 block">${l.date}</span><span class="font-black text-blue-900 text-sm">طلب #${l.id}</span></div>
                         <div class="flex gap-2">
                             <button onclick="printBill(${l.id})" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-print text-xs"></i></button>
+                            <button onclick="saveAsImg(${l.id})" class="text-green-600 bg-green-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-image text-xs"></i></button>
                         </div>
                     </div>
                     <div class="text-[10px] text-gray-600 mb-2 border-t pt-2">${l.items.map(i => `${i.name} (${i.qty})`).join(' ، ')}</div>
                     <div class="text-right font-black text-blue-900 text-sm">${l.total}﷼</div>
                 </div>
-            `).join('');
+            `).join('') || '<p class="text-center p-10 text-gray-400">لا توجد طلبات سابقة</p>';
         }
 
-        function closeHistory() {
-            document.getElementById('historyModal').classList.add('hidden');
-        }
+        function closeHistory() { document.getElementById('historyModal').classList.add('hidden'); }
 
         function checkAdmin() {
             const pin = prompt("أدخل كلمة مرور الإدارة:");
-            if (pin === "123456Aa") {
-                if (confirm("هل تريد مسح السجلات؟")) {
-                    localStorage.removeItem('m_logs');
-                    openHistory();
-                }
-            } else {
-                showToast("كلمة مرور خاطئة ❌");
-            }
+            if (pin === "123456Aa") { if (confirm("مسح السجلات؟")) { localStorage.removeItem('m_logs'); openHistory(); } }
+            else { showToast("كلمة مرور خاطئة ❌"); }
         }
 
         function printBill(id) {
             const log = JSON.parse(localStorage.getItem('m_logs')).find(l => l.id === id);
             const area = document.getElementById('printArea');
             area.innerHTML = `
-                <div style="text-align:center">
-                    <h2>فوال مروه</h2>
-                    <p>طلب #${log.id}</p>
-                    <p>${log.date}</p>
-                </div>
-                <hr>
-                <table style="width:100%">
-                    ${log.items.map(i => `<tr><td>${i.name} [${i.qty}]</td><td style="text-align:left">${i.price*i.qty}﷼</td></tr>`).join('')}
-                </table>
-                <hr>
-                <div style="text-align:left; font-weight:bold">الإجمالي: ${log.total}﷼</div>
+                <div style="text-align:center"><h2>فوال مروه</h2><p>طلب #${log.id}</p><p>${log.date}</p></div>
+                <hr><table style="width:100%">${log.items.map(i => `<tr><td>${i.name} [${i.qty}]</td><td style="text-align:left">${i.price*i.qty}﷼</td></tr>`).join('')}</table>
+                <hr><div style="text-align:left; font-weight:bold">الإجمالي: ${log.total}﷼</div><div style="text-align:center;margin-top:10px"><svg id="barcode"></svg></div>
             `;
+            JsBarcode("#barcode", log.id.toString(), { height: 30, fontSize: 12 });
             window.print();
         }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
+        async function saveAsImg(id) {
+            await printBill(id);
+            const area = document.getElementById('printArea');
+            area.classList.remove('hidden');
+            html2canvas(area).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `bill-${id}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                area.classList.add('hidden');
+                showToast("تم حفظ الفاتورة كصورة 🖼️");
+            });
         }
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
