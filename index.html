@@ -20,376 +20,491 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body { font-family: 'Tajawal', sans-serif; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; user-select: none; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .active-tab { background-color: #1e40af; color: white; transform: scale(1.05); }
-        .meal-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #f3f4f6; }
-        .meal-card:active { transform: scale(0.95); }
-        .cart-badge { animation: pop 0.3s ease-out; }
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+        .modal-blur { backdrop-filter: blur(10px); background: rgba(0,0,0,0.5); }
+        .slide-up { animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .item-card.active .sizes-panel { max-height: 500px; opacity: 1; margin-top: 15px; }
+        .sizes-panel { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.4s ease-in-out; }
+        .meal-title { font-size: 1.4rem; font-weight: 900; color: #1e3a8a; }
         
-        /* تنسيق الإشعار العصري الجديد */
-        #toast {
+        #printArea { display: none; width: 80mm; padding: 10px; background: white; color: black; font-family: 'Tajawal', sans-serif; }
+        
+        /* تصميم رسالة آيفون */
+        .iphone-tip { position: fixed; bottom: 110px; left: 20px; right: 20px; background: #1e293b; color: white; padding: 20px; border-radius: 25px; z-index: 5000; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.3); border: 1px solid rgba(255,255,255,0.1); }
+        .iphone-tip::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 10px solid #1e293b; }
+
+        /* تنسيق الإشعار العصري */
+        #customToast {
             visibility: hidden;
             min-width: 250px;
-            background-color: #1e40af;
+            background-color: #1e293b;
             color: #fff;
             text-align: center;
-            border-radius: 50px;
+            border-radius: 20px;
             padding: 16px;
             position: fixed;
-            z-index: 9999;
+            z-index: 10000;
             left: 50%;
-            bottom: 30px;
+            bottom: 50px;
             transform: translateX(-50%);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
         }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        #customToast.show { visibility: visible; opacity: 1; bottom: 100px; }
 
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; left: 0; top: 0; width: 80mm; padding: 5mm; background: white; }
+            #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
         }
     </style>
 </head>
-<body class="bg-gray-50 select-none">
+<body class="pb-32">
 
-    <div id="toast"></div>
+    <div id="customToast"></div>
 
-    <header class="bg-blue-800 text-white p-4 sticky top-0 z-40 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <img src="icon.png" class="w-10 h-10 rounded-full border-2 border-white shadow-sm" alt="logo">
-                <div>
-                    <h1 class="font-black text-lg leading-tight">فوال مروه</h1>
-                    <p class="text-[10px] opacity-80">س.ت: 5855364402</p>
-                </div>
+    <header class="bg-blue-800 text-white p-6 rounded-b-[45px] shadow-2xl sticky top-0 z-[100]">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-black">مطعم فوال مروه</h1>
+                <p class="text-[10px] opacity-80 font-bold">C.R: 2055134169</p>
             </div>
-            <div class="flex gap-4">
-                <button onclick="openHistory()" class="relative p-2 hover:bg-blue-700 rounded-full transition-colors">
-                    <i class="fas fa-history text-xl"></i>
-                </button>
-                <button onclick="toggleCart()" class="relative p-2 hover:bg-blue-700 rounded-full transition-colors">
-                    <i class="fas fa-shopping-basket text-xl"></i>
-                    <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-blue-800 cart-badge hidden">0</span>
-                </button>
+            <div class="flex gap-2">
+                <button onclick="openAuthModal()" class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20"><i class="fa-solid fa-receipt text-xl"></i></button>
+                <button onclick="showFavoriteList()" class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 text-red-400"><i class="fa-solid fa-heart text-xl"></i></button>
             </div>
         </div>
+        <div id="categoryTabs" class="flex gap-3 overflow-x-auto no-scrollbar pb-2"></div>
     </header>
 
-    <nav class="bg-white shadow-sm sticky top-[72px] z-30 overflow-x-auto no-scrollbar border-b">
-        <div class="flex p-3 gap-2 w-max mx-auto" id="categoryList"></div>
-    </nav>
-
-    <div class="p-4">
-        <div class="bg-gradient-to-r from-blue-700 to-blue-500 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
-            <div class="relative z-10">
-                <h2 class="text-xl font-bold mb-1">أهلاً بك في مروه 🍲</h2>
-                <p class="text-sm opacity-90">استمتع بألذ فطور شعبي ساخن..</p>
-                <button onclick="document.getElementById('neighborModal').classList.remove('hidden')" class="mt-4 bg-white text-blue-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform">
-                    <i class="fas fa-map-marker-alt ml-1"></i> أنا من سكان "حي بدر"
-                </button>
+    <main class="max-w-md mx-auto p-4 space-y-5">
+        <div id="nbrBtn" onclick="openNbrModal()" class="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 rounded-[35px] text-white flex justify-between items-center shadow-xl transform active:scale-95 transition cursor-pointer">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-white/20 rounded-3xl flex items-center justify-center text-3xl"><i class="fa-solid fa-house-user"></i></div>
+                <div><h3 class="font-black text-xl">أهل حي بدر</h3><p id="nbrLabel" class="text-xs opacity-80">أدخل الكود للتوصيل المجاني</p></div>
             </div>
-            <i class="fas fa-utensils absolute -bottom-4 -left-4 text-8xl opacity-10 rotate-12"></i>
+            <i id="nbrIcon" class="fa-solid fa-lock opacity-30"></i>
         </div>
-    </div>
-
-    <main class="container mx-auto p-4 pb-24 min-h-screen">
-        <div id="itemsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+        <div id="itemsGrid" class="space-y-4"></div>
     </main>
 
-    <div id="cartSidebar" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleCart()"></div>
-        <div class="absolute left-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-lg text-blue-900"><i class="fas fa-shopping-cart ml-2"></i>سلة الطلبات</h3>
-                <button onclick="toggleCart()" class="text-gray-500 text-2xl">&times;</button>
-            </div>
-            
-            <div id="cartItems" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+    <div id="floatingCart" onclick="openCartModal()" class="fixed bottom-28 left-6 right-6 bg-slate-900 text-white p-5 rounded-[30px] shadow-2xl z-[1000] hidden justify-between items-center border border-white/10 slide-up">
+        <div class="flex items-center gap-4">
+            <div class="bg-blue-600 w-10 h-10 rounded-full flex items-center justify-center font-black">0</div>
+            <span class="font-black">مراجعة الطلبات</span>
+        </div>
+        <span id="floatingTotal" class="text-2xl font-black text-blue-400">0﷼</span>
+    </div>
 
-            <div class="p-4 bg-gray-50 border-t space-y-4">
-                <div class="flex justify-between items-center text-xl font-black text-blue-900">
-                    <span>الإجمالي:</span>
-                    <span id="cartTotal">0﷼</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 mr-2">نوع الطلب</label>
-                        <select id="oType" class="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="محلي">🍽️ محلي</option>
-                            <option value="سفري">🥡 سفري</option>
-                        </select>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 mr-2">طريقة الدفع</label>
-                        <select id="payWay" class="w-full border rounded-xl p-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="عند الاستلام">💵 كاش</option>
-                            <option value="شبكة">💳 شبكة</option>
-                        </select>
-                    </div>
-                </div>
+    <nav class="fixed bottom-0 left-0 right-0 h-24 bg-white/90 backdrop-blur-md flex justify-around items-center z-[1100] px-6 border-t border-slate-100">
+        <a href="https://maps.app.goo.gl/AhwmkRePMiMfiSV79" class="flex flex-col items-center gap-1 text-slate-400">
+            <i class="fa-solid fa-map-pin text-2xl"></i><span class="text-[10px] font-black">موقعنا</span>
+        </a>
+        
+        <button id="pwaInstallBtn" onclick="handleInstallClick()" class="w-20 h-20 bg-blue-700 text-white rounded-full -mt-12 border-[6px] border-white shadow-2xl flex flex-col items-center justify-center transform active:scale-90 transition">
+            <i id="installIcon" class="fa-solid fa-download text-2xl"></i>
+            <span id="installText" class="text-[8px] font-black mt-1">تثبيت الآن</span>
+        </button>
 
-                <button onclick="confirmAndSend()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-lg active:scale-95">
-                    <i class="fab fa-whatsapp text-2xl"></i> إرسال الطلب عبر الواتساب
-                </button>
+        <a href="tel:0530195433" class="flex flex-col items-center gap-1 text-slate-400">
+            <i class="fa-solid fa-phone-volume text-2xl"></i><span class="text-[10px] font-black">اتصال</span>
+        </a>
+    </nav>
+
+    <div id="iphoneTip" class="iphone-tip slide-up hidden">
+        <div class="flex items-start gap-4 text-right">
+            <div class="bg-blue-600 p-3 rounded-2xl"><i class="fa-solid fa-mobile-screen-button text-xl"></i></div>
+            <div class="flex-1">
+                <h4 class="font-black text-sm mb-1">تثبيت على آيفون</h4>
+                <p class="text-[11px] opacity-80 leading-relaxed">
+                    اضغط على زر المشاركة <i class="fa-solid fa-arrow-up-from-bracket mx-1 text-blue-400"></i> بالأسفل، ثم اختر <b>"إضافة إلى الشاشة الرئيسية"</b>.
+                </p>
             </div>
+            <button onclick="closeIphoneTip()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </div>
 
-    <div id="historyModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-5 border-b flex justify-between items-center bg-blue-900 text-white">
-                <div>
-                    <h3 class="font-bold text-lg leading-tight">سجل الطلبات</h3>
-                    <p class="text-xs opacity-70">آخر 30 طلب محفوظ محلياً</p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button onclick="checkAdmin()" class="text-xs bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30 transition-colors">إدارة النظام</button>
-                    <button onclick="closeHistory()" class="text-2xl leading-none">&times;</button>
-                </div>
-            </div>
-            <div id="historyContent" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div>
+    <div id="printArea"></div>
+
+    <div id="mainModal" class="fixed inset-0 z-[2000] hidden modal-blur items-end sm:items-center justify-center p-0">
+        <div class="bg-white w-full max-w-lg rounded-t-[50px] p-8 slide-up overflow-y-auto max-h-[95vh] relative shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-6 left-6 w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">✕</button>
+            <div id="modalContent"></div>
         </div>
     </div>
-
-    <div id="neighborModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl border-2 border-blue-500">
-            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-truck text-blue-600 text-3xl"></i>
-            </div>
-            <h3 class="text-xl font-black text-blue-900 mb-2 text-center">خدمة توصيل حي بدر 🚚</h3>
-            <p class="text-gray-600 text-sm mb-6 leading-relaxed">أهلاً بزبوننا الغالي من سكان حي بدر.. فعل ميزة التوصيل المجاني للطلبات فوق 50 ريال.</p>
-            <input type="text" id="neighborCode" placeholder="أدخل كود المنطقة (إختياري)" class="w-full border-2 rounded-xl p-3 mb-4 outline-none focus:border-blue-600 text-center font-bold">
-            <div class="flex gap-3">
-                <button onclick="document.getElementById('neighborModal').classList.add('hidden')" class="flex-1 py-3 text-gray-400 font-bold">إلغاء</button>
-                <button onclick="activateNeighbor()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-95 transition-all">تفعيل الميزة</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="printArea" class="hidden text-black font-mono"></div>
 
     <script>
-        // استرجاع كافة الأصناف كاملة دون أي حذف
-        const DB = [
-            { id: 1, name: "فول مروه سادة", price: 9, cat: "فول", img: "🍲" },
-            { id: 2, name: "فول مروه بالسمن", price: 11, cat: "فول", img: "🥣" },
-            { id: 3, name: "فول مروه بزيت الزيتون", price: 11, cat: "فول", img: "🫒" },
-            { id: 4, name: "فول مروه بالتونة", price: 15, cat: "فول", img: "🐟" },
-            { id: 5, name: "فول مروه ملوكي", price: 18, cat: "فول", img: "👑" },
-            { id: 6, name: "فول قلابة سادة", price: 9, cat: "فول", img: "🥘" },
-            { id: 7, name: "عدس مروه سادة", price: 9, cat: "عدس", img: "🥣" },
-            { id: 8, name: "عدس مروه ملوكي", price: 18, cat: "عدس", img: "✨" },
-            { id: 9, name: "شكشوكة مروه", price: 11, cat: "بيض", img: "🍳" },
-            { id: 10, name: "بيض عيون", price: 9, cat: "بيض", img: "🍳" },
-            { id: 11, name: "لحسة مروه", price: 18, cat: "بيض", img: "🧀" },
-            { id: 12, name: "كبدة غنم بلدي", price: 24, cat: "لحوم", img: "🥩" },
-            { id: 13, name: "تقاطيع مروه", price: 20, cat: "لحوم", img: "🔥" },
-            { id: 14, name: "مطبق مروه مالح", price: 9, cat: "مطبق", img: "🥞" },
-            { id: 15, name: "مطبق مروه خضار", price: 10, cat: "مطبق", img: "🥗" },
-            { id: 16, name: "مطبق مروه ملوكي", price: 15, cat: "مطبق", img: "🌟" },
-            { id: 17, name: "معصوب مروه سادة", price: 9, cat: "معصوب", img: "🍌" },
-            { id: 18, name: "معصوب مروه ملكي", price: 18, cat: "معصوب", img: "💎" },
-            { id: 19, name: "عريكة مروه دبل", price: 22, cat: "معصوب", img: "🔥" },
-            { id: 20, name: "عريكة مروه ملوكي", price: 26, cat: "معصوب", img: "🏆" }
-        ];
+        // --- البيانات والمنطق البرمجي ---
+        const DB = {
+            "الوجبات": [
+                {id:1, name:"فول سادة", sizes:{s:3, m:4, l:5, local:6}}, {id:2, name:"فول مشكل", sizes:{s:4, m:5, l:6, local:7}},
+                {id:3, name:"فول قلابة طاوه", sizes:{s:4, m:5, l:6, local:7}}, {id:4, name:"فول طاوه بالبيض", sizes:{s:5, m:6, l:7, local:8}},
+                {id:5, name:"عدس سادة", sizes:{s:3, m:4, l:5, local:6}}, {id:6, name:"عدس مشكل", sizes:{s:4, m:5, l:6, local:7}},
+                {id:7, name:"عدس طاوه بيض", sizes:{s:5, m:6, l:7, local:8}}, {id:8, name:"فاصوليه", sizes:{s:6, m:8, l:12, local:7}},
+                {id:9, name:"فاصوليه بالبيض", sizes:{s:7, m:8, l:13, local:8}}, {id:10, name:"فاصوليه بالتونة", sizes:{s:10, m:12, l:13, local:11}},
+                {id:11, name:"بازليا", sizes:{s:6, m:7, l:12, local:7}}, {id:12, name:"بازليا تونة", sizes:{s:10, m:11, l:12, local:11}},
+                {id:13, name:"تونة", sizes:{s:10, m:11, l:12, local:10}}, {id:14, name:"شكشوكة", sizes:{s:6, m:7, l:8, local:7}},
+                {id:15, name:"شكشوكة جبن", sizes:{s:8, m:9, l:10, local:9}}, {id:16, name:"شكشوكة افغاني", sizes:{s:7, m:8, l:10, local:8}},
+                {id:17, name:"بيض مقلي", sizes:{s:6, m:8, l:9, local:7}}, {id:18, name:"بيض عيون", sizes:{s:6, m:8, l:9, local:7}},
+                {id:19, name:"لحسة", sizes:{s:9, m:10, l:12, local:10}}, {id:20, name:"شكشوكة عدني", sizes:{s:7, m:8, l:10, local:8}},
+                {id:21, name:"فلافل 4 حبة", price:1}, {id:22, name:"كمونية", sizes:{s:10, m:12, l:15, local:11}}
+            ],
+            "المطبق": [
+                {id:23, name:"مطبق خضار", price:5}, {id:24, name:"مطبق مالح", price:5}, {id:25, name:"مطبق موز", price:5},
+                {id:26, name:"مطبق حلو جبن", price:5}, {id:27, name:"مشكل حلو", price:10}, {id:28, name:"مشكل خضار", price:8},
+                {id:29, name:"تونة", price:8}, {id:30, name:"جبنة سائل", price:6}, {id:31, name:"جبنة شيدر", price:6},
+                {id:32, name:"جبنتين", price:8}, {id:33, name:"نوتيلا", price:7}
+            ],
+            "العريكة والفتة": [
+                {id:34, name:"قشطة عسل", price:12}, {id:35, name:"جبنة ديلوكس", price:14}, {id:36, name:"مكلي", price:16},
+                {id:37, name:"عريكة عرائسي", price:18}, {id:38, name:"عريكة مروة", price:18}, {id:39, name:"عريكة دبل قشطة", price:18},
+                {id:40, name:"فتة سمن عسل", price:10}
+            ],
+            "المعصوب": [
+                {id:41, name:"قشطة عسل", price:12}, {id:42, name:"جنبية ديلوكس", price:14}, {id:43, name:"ملكي", price:16},
+                {id:44, name:"معصوب عرائسي", price:18}, {id:45, name:"معصوب مروة", price:18}, {id:46, name:"معصوب دبل قشطة", price:18},
+                {id:47, name:"مرسي", price:10}
+            ],
+            "السندوتشات": [
+                {id:48, name:"كبدة", sizes:{samoli:4, fatira:5}}, {id:49, name:"كبدة جبنة", sizes:{samoli:5, fatira:6}},
+                {id:50, name:"مقلقل", sizes:{samoli:4, fatira:5}}, {id:51, name:"مقلقل جبن", sizes:{samoli:5, fatira:6}},
+                {id:52, name:"بيض مقلي", sizes:{samoli:3, fatira:4}}, {id:53, name:"بيض مقلي جبن", sizes:{samoli:4, fatira:5}},
+                {id:54, name:"شكشوكة", sizes:{samoli:3, fatira:4}}, {id:55, name:"شكشوكة جبن", sizes:{samoli:4, fatira:5}}
+            ],
+            "التميس": [
+                {id:56, name:"تميس عادي", price:1}, {id:57, name:"تميس سكر", price:3}, {id:58, name:"تميس بر", price:2},
+                {id:59, name:"تميس جبن", price:5}, {id:60, name:"تميس جبن سكر", price:6}, {id:61, name:"تميس بر جبن", price:7},
+                {id:62, name:"تميس جبن دبل", price:9}, {id:63, name:"تميس سمن", price:2}, {id:64, name:"تميس سمن سكر", price:3},
+                {id:65, name:"تميس سمن جبن سكر", price:8}, {id:66, name:"تميس بسكوت", price:3}, {id:67, name:"تميس بسكوت سكر", price:4},
+                {id:68, name:"تميس بسكوت جبن", price:8}, {id:69, name:"تميس زعتر", price:4}, {id:70, name:"تميس بر زعتر", price:5}
+            ],
+            "المشروبات": [
+                {id:71, name:"ماء", price:1}, {id:72, name:"مشروب غازي", price:3}, {id:73, name:"شاي سادة", price:1}, {id:74, name:"شاي بالحليب", price:2}
+            ]
+        };
 
         let cart = [];
-        let currentCat = "الكل";
-        let isNeighbor = false;
-        let favs = JSON.parse(localStorage.getItem('m_favs') || '[]');
+        let isNeighbor = localStorage.getItem('isNbr') === 'true';
+        let currentCategory = "الوجبات";
+        let activeItemId = null;
+        let deferredPrompt;
 
+        const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        // وظيفة الإشعار العصري
         function showToast(text) {
-            const toast = document.getElementById("toast");
+            const toast = document.getElementById("customToast");
             toast.innerText = text;
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+            toast.classList.add("show");
+            setTimeout(() => { toast.classList.remove("show"); }, 3000);
         }
 
+        // منطق زر الرجوع لمنع الخروج
         function handleBack() {
-            if (!document.getElementById('cartSidebar').classList.contains('hidden')) { toggleCart(); }
-            else if (!document.getElementById('historyModal').classList.contains('hidden')) { closeHistory(); }
-            else if (!document.getElementById('neighborModal').classList.contains('hidden')) { document.getElementById('neighborModal').classList.add('hidden'); }
-            else {
-                if (confirm("هل أنت متأكد من رغبتك في الخروج من التطبيق؟")) { window.history.back(); }
-                else { history.pushState(null, null, window.location.pathname); }
+            if (document.getElementById('mainModal').style.display === 'flex') {
+                closeModal();
+            } else if (!document.getElementById('iphoneTip').classList.contains('hidden')) {
+                closeIphoneTip();
+            } else {
+                // دفع حالة وهمية لإبقاء المستخدم في التطبيق
+                history.pushState(null, null, window.location.pathname);
+                showToast("اسحب للأعلى للخروج أو استخدم زر القائمة");
             }
         }
 
         window.onload = () => {
-            renderCategories();
-            renderItems();
+            renderTabs(); renderItems(); updateCartDisplay(); if(isNeighbor) setNeighborUI();
+            checkInstallationStatus();
+            
+            // تهيئة حالة التاريخ لزر الرجوع
             history.pushState(null, null, window.location.pathname);
             window.addEventListener('popstate', handleBack);
+            
+            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
         };
 
-        function renderCategories() {
-            const cats = ["الكل", "المفضلة", ...new Set(DB.map(i => i.cat))];
-            const list = document.getElementById('categoryList');
-            list.innerHTML = cats.map(c => `
-                <button onclick="filterCat('${c}')" class="px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap shadow-sm border transition-all ${currentCat===c?'active-tab':'bg-white text-gray-600 border-gray-100'}">
-                    ${c === "المفضلة" ? '⭐ ' + c : c}
-                </button>
+        function checkInstallationStatus() {
+            if (isStandalone) {
+                document.getElementById('installText').innerText = "تم التثبيت";
+                document.getElementById('installIcon').className = "fa-solid fa-check text-2xl";
+                document.getElementById('pwaInstallBtn').classList.replace('bg-blue-700', 'bg-emerald-600');
+            }
+        }
+
+        async function handleInstallClick() {
+            if (isStandalone) { showToast("التطبيق مثبت بالفعل على جهازك ✅"); return; }
+            if (isIos) { document.getElementById('iphoneTip').classList.remove('hidden'); return; }
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') { deferredPrompt = null; checkInstallationStatus(); }
+            } else {
+                showToast("استخدم خيارات المتصفح 'إضافة إلى الشاشة الرئيسية'");
+            }
+        }
+
+        function closeIphoneTip() { document.getElementById('iphoneTip').classList.add('hidden'); }
+
+        function renderTabs() {
+            const tabs = document.getElementById('categoryTabs');
+            tabs.innerHTML = Object.keys(DB).map(cat => `
+                <button onclick="setCategory('${cat}')" class="px-6 py-2 rounded-2xl whitespace-nowrap font-bold transition-all ${cat === currentCategory ? 'bg-white text-blue-900 shadow-xl' : 'text-white/70'}">${cat}</button>
             `).join('');
         }
 
-        function filterCat(c) { currentCat = c; renderCategories(); renderItems(); }
+        function setCategory(cat) { currentCategory = cat; renderTabs(); renderItems(); }
 
         function renderItems() {
             const grid = document.getElementById('itemsGrid');
-            let items = [];
-            if (currentCat === "الكل") items = DB;
-            else if (currentCat === "المفضلة") items = DB.filter(i => favs.includes(i.id));
-            else items = DB.filter(i => i.cat === currentCat);
-
-            grid.innerHTML = items.map(i => `
-                <div class="meal-card bg-white p-3 rounded-3xl relative flex flex-col shadow-sm">
-                    <button onclick="toggleFav(${i.id})" class="absolute top-2 right-2 z-10 text-lg">
-                        <i class="${favs.includes(i.id)?'fas fa-star text-yellow-400':'far fa-star text-gray-300'}"></i>
-                    </button>
-                    <div class="h-24 flex items-center justify-center text-4xl mb-2 bg-gray-50 rounded-2xl">${i.img}</div>
-                    <h3 class="font-bold text-xs text-blue-900 mb-1 line-clamp-1">${i.name}</h3>
-                    <div class="flex justify-between items-center mt-auto">
-                        <span class="text-blue-700 font-black text-sm">${i.price}﷼</span>
-                        <button onclick="addToCart(${i.id})" class="bg-blue-600 text-white w-8 h-8 rounded-xl flex items-center justify-center shadow-md active:bg-blue-800">
-                            <i class="fas fa-plus text-xs"></i>
-                        </button>
+            grid.innerHTML = DB[currentCategory].map(item => {
+                const isActive = activeItemId === item.id;
+                return `
+                <div class="bg-white rounded-[30px] p-5 shadow-sm border border-slate-50 item-card ${isActive ? 'active shadow-lg' : ''}" onclick="toggleItem(${item.id})">
+                    <div class="flex justify-between items-center">
+                        <div class="meal-title">${item.name}</div>
+                        ${item.price ? `<div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl">
+                                <button onclick="event.stopPropagation(); updateQty(${item.id}, -1, '${item.name}', ${item.price})" class="w-10 h-10 bg-white text-red-500 rounded-xl shadow-md font-black">-</button>
+                                <span class="font-black text-lg">${getQty(item.id, 'default')}</span>
+                                <button onclick="event.stopPropagation(); updateQty(${item.id}, 1, '${item.name}', ${item.price})" class="w-10 h-10 bg-blue-700 text-white rounded-xl shadow-md font-black">+</button>
+                            </div>` : `<i class="fa-solid fa-plus-circle text-blue-200 text-2xl"></i>`}
                     </div>
-                </div>
-            `).join('');
+                    ${item.sizes ? `<div class="sizes-panel grid grid-cols-2 gap-3" onclick="event.stopPropagation()">
+                            ${Object.entries(item.sizes).map(([s, p]) => `
+                                <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100 flex justify-between items-center">
+                                    <div class="text-xs font-black text-blue-900">${getSizeName(s)}<br><span class="text-[10px] text-slate-500">${p}﷼</span></div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="updateQty(${item.id}, -1, '${item.name}', ${p}, '${s}')" class="w-7 h-7 bg-white text-red-500 rounded-lg shadow-sm font-black">-</button>
+                                        <span class="font-bold text-sm">${getQty(item.id, s)}</span>
+                                        <button onclick="updateQty(${item.id}, 1, '${item.name}', ${p}, '${s}')" class="w-7 h-7 bg-blue-700 text-white rounded-lg shadow-sm font-black">+</button>
+                                    </div>
+                                </div>`).join('')}
+                        </div>` : ''}
+                </div>`;
+            }).join('');
         }
 
-        function toggleFav(id) {
-            if (favs.includes(id)) favs = favs.filter(f => f !== id);
-            else favs.push(id);
-            localStorage.setItem('m_favs', JSON.stringify(favs));
-            renderItems();
-            renderCategories();
+        function toggleItem(id) { activeItemId = (activeItemId === id) ? null : id; renderItems(); }
+        function getSizeName(s) { return {s:'صغير', m:'وسط', l:'كبير', local:'محلي', samoli:'صامولي', fatira:'فطيرة'}[s] || s; }
+
+        function updateQty(id, delta, name, price, size = 'default') {
+            const key = `${id}-${size}`; const idx = cart.findIndex(i => i.key === key);
+            if (idx > -1) { cart[idx].qty += delta; if (cart[idx].qty <= 0) cart.splice(idx, 1); }
+            else if (delta > 0) { 
+                cart.push({ id, key, name: size !== 'default' ? `${name} (${getSizeName(size)})` : name, price, qty: 1, size }); 
+                if(delta > 0) showToast("تمت الإضافة للسلة 🛒");
+            }
+            updateCartDisplay(); renderItems();
+            if(document.getElementById('mainModal').style.display === 'flex' && !document.getElementById('authInput') && !document.getElementById('favListContent')) openCartModal();
         }
 
-        function addToCart(id) {
-            const item = DB.find(i => i.id === id);
-            const inCart = cart.find(c => c.id === id);
-            if (inCart) inCart.qty++;
-            else cart.push({ ...item, qty: 1 });
-            updateCartDisplay();
-            showToast(`تمت إضافة ${item.name} للسلة`);
-        }
+        function getQty(id, size) { const item = cart.find(i => i.key === `${id}-${size}`); return item ? item.qty : 0; }
 
         function updateCartDisplay() {
-            const list = document.getElementById('cartItems');
-            const count = document.getElementById('cartCount');
-            const total = document.getElementById('cartTotal');
-            const totalQty = cart.reduce((s, i) => s + i.qty, 0);
-            const totalCash = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-            count.innerText = totalQty;
-            count.classList.toggle('hidden', totalQty === 0);
-            total.innerText = totalCash + "﷼";
-            list.innerHTML = cart.map(i => `
-                <div class="flex items-center justify-between bg-white p-3 rounded-2xl border-b">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">${i.img}</div>
-                        <div><h4 class="font-bold text-sm text-blue-900">${i.name}</h4><p class="text-xs text-blue-600 font-bold">${i.price}﷼</p></div>
+            const count = cart.reduce((s, i) => s + i.qty, 0);
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            document.getElementById('floatingCart').style.display = count > 0 ? 'flex' : 'none';
+            document.querySelector('#floatingCart .bg-blue-600').innerText = count;
+            document.getElementById('floatingTotal').innerText = total + "﷼";
+        }
+
+        function openNbrModal() {
+            document.getElementById('modalContent').innerHTML = `
+                <div class="text-center">
+                    <div class="w-24 h-24 bg-blue-100 text-blue-600 rounded-[35px] flex items-center justify-center mx-auto mb-6 text-4xl"><i class="fa-solid fa-house-chimney-user"></i></div>
+                    <h2 class="text-2xl font-black text-blue-900 mb-2">أهل حي بدر</h2>
+                    <input type="text" id="nbrInput" placeholder="أدخل الكود" class="w-full p-5 bg-slate-50 rounded-3xl border-2 border-slate-100 outline-none text-center font-black text-2xl mb-4">
+                    <button onclick="verifyNbr()" class="w-full bg-blue-800 text-white py-5 rounded-[25px] font-black shadow-xl">تفعيل</button>
+                    <p id="nbrMsg" class="mt-4 text-xs font-bold text-red-500 hidden">الكود غير صحيح!</p>
+                </div>`;
+            document.getElementById('mainModal').style.display = 'flex';
+        }
+
+        function verifyNbr() {
+            if(document.getElementById('nbrInput').value === "حي بدر") { 
+                isNeighbor = true; localStorage.setItem('isNbr', 'true'); setNeighborUI(); closeModal(); 
+                showToast("تم تفعيل ميزة حي بدر ✅");
+            } 
+            else { document.getElementById('nbrMsg').classList.remove('hidden'); }
+        }
+
+        function setNeighborUI() {
+            document.getElementById('nbrBtn').classList.replace('from-blue-700', 'from-emerald-600');
+            document.getElementById('nbrLabel').innerText = "نظام التوصيل المجاني مفعل ✅";
+            document.getElementById('nbrIcon').className = "fa-solid fa-circle-check text-2xl opacity-100";
+        }
+
+        function openAuthModal() {
+            document.getElementById('modalContent').innerHTML = `
+                <div class="text-center">
+                    <div class="w-24 h-24 bg-slate-100 text-slate-600 rounded-[35px] flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h2 class="text-2xl font-black text-slate-800 mb-2">سجل المبيعات</h2>
+                    <input type="password" id="authInput" placeholder="••••••••" class="w-full p-5 bg-slate-50 rounded-3xl border-2 border-slate-100 outline-none text-center font-black text-2xl mb-4">
+                    <button onclick="verifyAuth()" class="w-full bg-slate-800 text-white py-5 rounded-[25px] font-black shadow-xl">دخول</button>
+                    <p id="authMsg" class="mt-4 text-xs font-bold text-red-500 hidden">الرمز غير صحيح!</p>
+                </div>`;
+            document.getElementById('mainModal').style.display = 'flex';
+        }
+
+        function verifyAuth() {
+            if(document.getElementById('authInput').value === "123456Aa") showHistory(); 
+            else { document.getElementById('authMsg').classList.remove('hidden'); showToast("رمز الدخول خاطئ ❌"); }
+        }
+
+        function showHistory() {
+            const logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
+            document.getElementById('modalContent').innerHTML = `
+                <h2 class="text-2xl font-black mb-6">سجل آخر الطلبات</h2>
+                <div class="space-y-4">
+                    ${logs.map((l, index) => `
+                        <div onclick="showLogDetail(${index})" class="p-5 bg-slate-50 rounded-[30px] border border-white shadow-sm cursor-pointer active:scale-95 transition">
+                            <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-2"><span>ID: ${l.id}</span><span>${l.date}</span></div>
+                            <div class="text-sm font-black text-slate-700 mb-2 truncate">${l.items.map(i=>i.name).join(', ')}</div>
+                            <div class="flex justify-between items-center"><span class="text-blue-700 font-black">${l.total}﷼</span> <i class="fa-solid fa-circle-info text-blue-300"></i></div>
+                        </div>`).join(logs.length?'':'<p class="text-center py-10 opacity-30">لا يوجد سجلات</p>')}
+                </div>`;
+        }
+
+        function showLogDetail(index) {
+            const log = JSON.parse(localStorage.getItem('m_logs'))[index];
+            const content = `
+                <div id="receiptToCapture" class="bg-white p-6 rounded-3xl border border-slate-100 text-right" dir="rtl">
+                    <div class="text-center border-b border-dashed border-slate-200 pb-4 mb-4">
+                        <h3 class="font-black text-xl text-blue-900">فوال مروه</h3>
+                        <p class="text-[12px] font-bold text-blue-600 mt-1">ID: ${log.id}</p>
+                        <p class="text-[10px] text-slate-400">${log.date}</p>
                     </div>
-                    <div class="flex items-center gap-3 bg-gray-100 rounded-xl px-2 py-1">
-                        <button onclick="changeQty(${i.id}, -1)" class="w-6 h-6 flex items-center justify-center"><i class="fas fa-minus text-[10px]"></i></button>
-                        <span class="font-bold text-sm w-4 text-center">${i.qty}</span>
-                        <button onclick="changeQty(${i.id}, 1)" class="w-6 h-6 flex items-center justify-center"><i class="fas fa-plus text-[10px]"></i></button>
+                    <div class="space-y-2 mb-6 text-sm font-bold">
+                        ${log.items.map(i => `<div class="flex justify-between"><span>${i.name} × ${i.qty}</span><span>${i.price * i.qty}﷼</span></div>`).join('')}
+                    </div>
+                    <div class="border-t border-dashed border-slate-200 pt-4 flex justify-between items-center font-black text-xl">
+                        <span>الإجمالي</span><span class="text-blue-700">${log.total}﷼</span>
                     </div>
                 </div>
-            `).join('');
+                <div class="grid grid-cols-2 gap-3 mt-6">
+                    <button onclick="printLog('${log.id}')" class="bg-slate-800 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fa-solid fa-print"></i> طباعة</button>
+                    <button onclick="saveLogAsImage()" class="bg-blue-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2"><i class="fa-solid fa-image"></i> حفظ صورة</button>
+                </div>
+                <button onclick="showHistory()" class="w-full mt-3 py-3 text-slate-400 font-bold">رجوع للسجل</button>`;
+            document.getElementById('modalContent').innerHTML = content;
         }
 
-        function changeQty(id, n) {
-            const item = cart.find(i => i.id === id);
-            item.qty += n;
-            if (item.qty <= 0) cart = cart.filter(c => c.id !== id);
-            updateCartDisplay();
+        function printLog() {
+            const content = document.getElementById('receiptToCapture').innerHTML;
+            document.getElementById('printArea').innerHTML = content;
+            window.print();
         }
 
-        function toggleCart() { document.getElementById('cartSidebar').classList.toggle('hidden'); }
+        function saveLogAsImage() {
+            const element = document.getElementById('receiptToCapture');
+            html2canvas(element, { scale: 3 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `فاتورة_مروه_${Date.now()}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                showToast("تم حفظ الصورة بنجاح 🖼️");
+            });
+        }
 
-        function activateNeighbor() { isNeighbor = true; document.getElementById('neighborModal').classList.add('hidden'); showToast("تم تفعيل ميزة حي بدر ✅"); }
+        function saveAsFavorite() {
+            if(cart.length === 0) return showToast("السلة فارغة! 🛒");
+            let favs = JSON.parse(localStorage.getItem('m_favs_list') || '[]');
+            const newFav = { id: Date.now(), items: [...cart], total: cart.reduce((s, i) => s + (i.price * i.qty), 0) };
+            favs.unshift(newFav);
+            localStorage.setItem('m_favs_list', JSON.stringify(favs.slice(0, 3)));
+            showToast("تم الحفظ في المفضل ❤️");
+        }
+
+        function showFavoriteList() {
+            const favs = JSON.parse(localStorage.getItem('m_favs_list') || '[]');
+            document.getElementById('modalContent').innerHTML = `
+                <div id="favListContent">
+                    <h2 class="text-2xl font-black mb-6 text-red-600"><i class="fa-solid fa-heart mr-2"></i> طلباتي المفضلة</h2>
+                    <div class="space-y-4">
+                        ${favs.map((f, idx) => `
+                            <div onclick="applyFavorite(${idx})" class="p-5 bg-red-50/50 rounded-[30px] border border-red-100 shadow-sm cursor-pointer active:scale-95 transition relative">
+                                <div class="text-[10px] text-red-400 font-bold mb-2">طلب مفضل رقم ${idx+1}</div>
+                                <div class="text-sm font-black text-slate-700 mb-2 truncate">${f.items.map(i=>i.name).join(', ')}</div>
+                                <div class="flex justify-between items-center"><span class="text-red-600 font-black">${f.total}﷼</span> <span class="bg-red-600 text-white text-[10px] px-3 py-1 rounded-full">استعادة الطلب</span></div>
+                            </div>`).join(favs.length?'':'<p class="text-center py-10 opacity-30 text-slate-500">لا توجد طلبات مفضلة محفوظة</p>')}
+                    </div>
+                </div>`;
+            document.getElementById('mainModal').style.display = 'flex';
+        }
+
+        function applyFavorite(index) {
+            const favs = JSON.parse(localStorage.getItem('m_favs_list') || '[]');
+            cart = [...favs[index].items];
+            updateCartDisplay(); renderItems(); closeModal();
+            showToast("تمت استعادة الطلب المفضل ✅");
+        }
+
+        function openCartModal() {
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            document.getElementById('modalContent').innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-black">مراجعة طلبي</h2>
+                    <button onclick="saveAsFavorite()" class="bg-red-50 text-red-600 px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 border border-red-100"><i class="fa-solid fa-heart"></i> حفظ كمفضل</button>
+                </div>
+                <div class="space-y-4 mb-8">
+                    ${cart.map(i => `
+                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-3xl">
+                            <div><h4 class="font-black">${i.name}</h4><p class="text-xs text-blue-600">${i.price * i.qty}﷼</p></div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="updateQty(${i.id}, -1, '', 0, '${i.size}')" class="w-9 h-9 bg-white text-red-500 rounded-xl shadow-sm font-black">-</button>
+                                <span class="font-black">${i.qty}</span>
+                                <button onclick="updateQty(${i.id}, 1, '', 0, '${i.size}')" class="w-9 h-9 bg-blue-700 text-white rounded-xl shadow-sm font-black">+</button>
+                            </div>
+                        </div>`).join('')}
+                </div>
+                <div class="bg-blue-50/50 p-6 rounded-[35px] space-y-4 mb-6">
+                    ${isNeighbor ? `
+                        <input type="text" id="custName" placeholder="الاسم" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none">
+                        <input type="text" id="custLoc" placeholder="رقم المنزل / العنوان" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none">
+                        <select id="payWay" onchange="document.getElementById('cBox').classList.toggle('hidden', this.value!=='كاش')" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش">💵 كاش</option><option value="شبكة">💳 شبكة</option></select>
+                        <input type="number" id="cBox" placeholder="الصرف المطلوب؟" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none hidden">
+                    ` : `<div class="grid grid-cols-2 gap-2">
+                            <select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري">🥡 سفري</option><option value="محلي">🍽️ محلي</option></select>
+                            <select id="payWay" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش">💵 كاش</option><option value="شبكة">💳 شبكة</option></select>
+                        </div>`}
+                </div>
+                <div class="flex justify-between items-center mb-6 px-2"><span class="text-lg font-bold text-slate-400">الإجمالي:</span><span class="text-3xl font-black text-blue-800">${total}﷼</span></div>
+                <button onclick="confirmAndSend()" class="w-full bg-green-600 text-white py-5 rounded-[25px] font-black text-xl flex items-center justify-center gap-3">إرسال للواتساب <i class="fa-brands fa-whatsapp"></i></button>`;
+            document.getElementById('mainModal').style.display = 'flex';
+        }
 
         function confirmAndSend() {
-            if (!cart.length) return showToast("السلة فارغة!");
+            let info = "";
+            if(isNeighbor) {
+                const n = document.getElementById('custName').value, l = document.getElementById('custLoc').value, c = document.getElementById('cBox').value;
+                if(!n || !l) return showToast("يرجى إكمال البيانات ⚠️");
+                localStorage.setItem('u_name', n); localStorage.setItem('u_loc', l);
+                info = `%0A👤 *الاسم:* ${n}%0A📍 *العنوان:* ${l}${c?`%0A💵 *الصرف:* ${c}﷼`:''}`;
+            }
             saveToHistory();
             const lastLog = JSON.parse(localStorage.getItem('m_logs'))[0];
-            let msg = `*طلب جديد - فوال مروه*%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${document.getElementById('oType').value}${isNeighbor?'%0A📍 *حي بدر*':''}%0A💳 *الدفع:* ${document.getElementById('payWay').value}%0A--------------------------%0A`;
+            let msg = `*طلب جديد - فوال مروه*%0A--------------------------%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${isNeighbor?'توصيل حي بدر':document.getElementById('oType').value}%0A💳 *الدفع:* ${document.getElementById('payWay').value}${info}%0A--------------------------%0A`;
             cart.forEach(i => msg += `• ${i.name} [${i.qty}] = ${i.price * i.qty}﷼%0A`);
             msg += `--------------------------%0A💰 *الإجمالي: ${cart.reduce((s,i)=>s+(i.price*i.qty),0)}﷼*`;
             window.location.href = `https://wa.me/966530195433?text=${msg}`;
-            cart = []; updateCartDisplay(); toggleCart();
+            cart = []; updateCartDisplay(); closeModal(); renderItems();
         }
 
         function saveToHistory() {
             let logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
             const generateID = () => Math.floor(100000 + Math.random() * 900000);
-            logs.unshift({ id: generateID(), date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
+            let newID = generateID();
+            while(logs.some(l => l.id === newID)) { newID = generateID(); }
+            logs.unshift({ id: newID, date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
             localStorage.setItem('m_logs', JSON.stringify(logs.slice(0, 30)));
         }
 
-        function openHistory() {
-            const modal = document.getElementById('historyModal');
-            const content = document.getElementById('historyContent');
-            const logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
-            modal.classList.remove('hidden');
-            content.innerHTML = logs.map(l => `
-                <div class="bg-white p-4 rounded-2xl border-r-4 border-blue-900 shadow-sm">
-                    <div class="flex justify-between items-start mb-2">
-                        <div><span class="text-[10px] text-gray-400 block">${l.date}</span><span class="font-black text-blue-900 text-sm">طلب #${l.id}</span></div>
-                        <div class="flex gap-2">
-                            <button onclick="printBill(${l.id})" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-print text-xs"></i></button>
-                            <button onclick="saveAsImg(${l.id})" class="text-green-600 bg-green-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-image text-xs"></i></button>
-                        </div>
-                    </div>
-                    <div class="text-[10px] text-gray-600 mb-2 border-t pt-2">${l.items.map(i => `${i.name} (${i.qty})`).join(' ، ')}</div>
-                    <div class="text-right font-black text-blue-900 text-sm">${l.total}﷼</div>
-                </div>
-            `).join('') || '<p class="text-center p-10 text-gray-400">لا توجد طلبات سابقة</p>';
-        }
-
-        function closeHistory() { document.getElementById('historyModal').classList.add('hidden'); }
-
-        function checkAdmin() {
-            const pin = prompt("أدخل كلمة مرور الإدارة:");
-            if (pin === "123456Aa") { if (confirm("مسح السجلات؟")) { localStorage.removeItem('m_logs'); openHistory(); } }
-            else { showToast("كلمة مرور خاطئة ❌"); }
-        }
-
-        function printBill(id) {
-            const log = JSON.parse(localStorage.getItem('m_logs')).find(l => l.id === id);
-            const area = document.getElementById('printArea');
-            area.innerHTML = `
-                <div style="text-align:center"><h2>فوال مروه</h2><p>طلب #${log.id}</p><p>${log.date}</p></div>
-                <hr><table style="width:100%">${log.items.map(i => `<tr><td>${i.name} [${i.qty}]</td><td style="text-align:left">${i.price*i.qty}﷼</td></tr>`).join('')}</table>
-                <hr><div style="text-align:left; font-weight:bold">الإجمالي: ${log.total}﷼</div><div style="text-align:center;margin-top:10px"><svg id="barcode"></svg></div>
-            `;
-            JsBarcode("#barcode", log.id.toString(), { height: 30, fontSize: 12 });
-            window.print();
-        }
-
-        async function saveAsImg(id) {
-            await printBill(id);
-            const area = document.getElementById('printArea');
-            area.classList.remove('hidden');
-            html2canvas(area).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `bill-${id}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                area.classList.add('hidden');
-                showToast("تم حفظ الفاتورة كصورة 🖼️");
-            });
-        }
-
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        function closeModal() { document.getElementById('mainModal').style.display = 'none'; }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err)); }
     </script>
 </body>
 </html>
