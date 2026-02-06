@@ -16,7 +16,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
@@ -48,7 +47,9 @@
         }
     </style>
 </head>
-<body class="pb-32"> <div id="customToast"></div>
+<body class="pb-32">
+
+    <div id="customToast"></div>
 
     <header class="bg-blue-800 text-white p-6 rounded-b-[45px] shadow-2xl sticky top-0 z-[100]">
         <div class="flex justify-between items-center mb-6">
@@ -170,11 +171,10 @@
         window.onload = () => {
             renderTabs(); renderItems(); updateCartDisplay(); if(isNeighbor) setNeighborUI();
             
-            // إدارة زر الرجوع الذكي
             history.pushState(null, null, window.location.pathname);
             window.addEventListener('popstate', function (event) {
                 if (document.getElementById('mainModal').style.display === 'flex') {
-                    closeModal(); // إغلاق النافذة إذا كانت مفتوحة
+                    closeModal();
                     history.pushState(null, null, window.location.pathname);
                 } else {
                     if (!backPressedOnce) {
@@ -183,7 +183,7 @@
                         history.pushState(null, null, window.location.pathname);
                         setTimeout(() => { backPressedOnce = false; }, 2000);
                     } else {
-                        window.history.back(); // الخروج الفعلي
+                        window.history.back();
                     }
                 }
             });
@@ -279,6 +279,7 @@
                     <div class="text-center border-b border-dashed pb-4 mb-4">
                         <h3 class="font-black text-xl">فوال مروه</h3>
                         <p class="font-bold text-blue-700">ID: ${log.id}</p>
+                        <p class="text-xs font-bold text-slate-600">${log.type} | ${log.payment}</p>
                         <p class="text-[10px] text-slate-400">${log.date}</p>
                     </div>
                     ${log.items.map(i => `<div class="flex justify-between text-sm mb-2 font-bold"><span>${i.name} × ${i.qty}</span><span>${i.price * i.qty}﷼</span></div>`).join('')}
@@ -322,30 +323,56 @@
             document.getElementById('modalContent').innerHTML = `
                 <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black">مراجعة طلبي</h2><button onclick="saveAsFavorite()" class="bg-red-50 text-red-600 px-4 py-2 rounded-2xl font-bold text-xs"><i class="fa-solid fa-heart"></i> مفضل</button></div>
                 <div class="space-y-4 mb-8">${cart.map(i => `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-3xl"><div><h4 class="font-black">${i.name}</h4><p class="text-xs text-blue-600">${i.price * i.qty}﷼</p></div><div class="flex items-center gap-3"><button onclick="updateQty(${i.id}, -1, '', 0, '${i.size}')" class="w-9 h-9 bg-white text-red-500 rounded-xl shadow-sm font-black">-</button><span class="font-black">${i.qty}</span><button onclick="updateQty(${i.id}, 1, '', 0, '${i.size}')" class="w-9 h-9 bg-blue-700 text-white rounded-xl shadow-sm font-black">+</button></div></div>`).join('')}</div>
-                <div class="bg-blue-50/50 p-6 rounded-[35px] space-y-4 mb-6">${isNeighbor ? `<input type="text" id="custName" placeholder="الاسم" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><input type="text" id="custLoc" placeholder="رقم المنزل" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold">` : `<div class="grid grid-cols-2 gap-2"><select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري">🥡 سفري</option><option value="محلي">🍽️ محلي</option></select><select id="payWay" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش">💵 كاش</option><option value="شبكة">💳 شبكة</option></select></div>`}</div>
+                <div class="bg-blue-50/50 p-6 rounded-[35px] space-y-4 mb-6">
+                    ${isNeighbor ? 
+                    `<div class="space-y-2">
+                        <input type="text" id="custName" placeholder="الاسم" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold">
+                        <input type="text" id="custLoc" placeholder="رقم المنزل" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold">
+                        <select id="payWay" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش">💵 كاش</option><option value="شبكة">💳 شبكة</option></select>
+                     </div>` : 
+                    `<div class="grid grid-cols-2 gap-2">
+                        <select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري">🥡 سفري</option><option value="محلي">🍽️ محلي</option></select>
+                        <select id="payWay" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش">💵 كاش</option><option value="شبكة">💳 شبكة</option></select>
+                     </div>`}
+                </div>
                 <div class="flex justify-between items-center mb-6 px-2"><span class="text-lg font-bold text-slate-400">الإجمالي:</span><span class="text-3xl font-black text-blue-800">${total}﷼</span></div>
                 <button onclick="confirmAndSend()" class="w-full bg-green-600 text-white py-5 rounded-[25px] font-black text-xl flex items-center justify-center gap-3">إرسال للواتساب <i class="fa-brands fa-whatsapp"></i></button>`;
             document.getElementById('mainModal').style.display = 'flex';
         }
 
         function confirmAndSend() {
+            const payMethod = document.getElementById('payWay').value;
+            const orderType = isNeighbor ? "توصيل حي بدر" : document.getElementById('oType').value;
+            
             if(isNeighbor) {
                 localStorage.setItem('u_name', document.getElementById('custName').value);
                 localStorage.setItem('u_loc', document.getElementById('custLoc').value);
             }
-            saveToHistory();
+
+            saveToHistory(orderType, payMethod);
             const logs = JSON.parse(localStorage.getItem('m_logs'));
             const lastLog = logs[0];
-            let msg = `*طلب جديد - فوال مروه*%0A🆔 *ID:* ${lastLog.id}%0A--------------------------%0A`;
+            
+            let msg = `*طلب جديد - فوال مروه*%0A🆔 *ID:* ${lastLog.id}%0A📢 *النوع:* ${orderType}%0A💳 *الدفع:* ${payMethod}%0A`;
+            if(isNeighbor) msg += `👤 *العميل:* ${document.getElementById('custName').value}%0A🏠 *العنوان:* ${document.getElementById('custLoc').value}%0A`;
+            msg += `--------------------------%0A`;
             cart.forEach(i => msg += `• ${i.name} [${i.qty}] = ${i.price * i.qty}﷼%0A`);
             msg += `--------------------------%0A💰 *الإجمالي: ${cart.reduce((s,i)=>s+(i.price*i.qty),0)}﷼*`;
+            
             window.location.href = `https://wa.me/966530195433?text=${msg}`;
             cart = []; updateCartDisplay(); closeModal(); renderItems();
         }
 
-        function saveToHistory() {
+        function saveToHistory(type, payment) {
             let logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
-            logs.unshift({ id: Math.floor(100000 + Math.random() * 900000), date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
+            logs.unshift({ 
+                id: Math.floor(100000 + Math.random() * 900000), 
+                date: new Date().toLocaleString('ar-SA'), 
+                items: [...cart], 
+                total: cart.reduce((s,i)=>s+(i.price*i.qty),0),
+                type: type,
+                payment: payment
+            });
             localStorage.setItem('m_logs', JSON.stringify(logs.slice(0, 30)));
         }
 
@@ -354,7 +381,7 @@
             document.getElementById('mainModal').style.display = 'flex';
         }
         function verifyNbr() { if(document.getElementById('nbrInput').value === "حي بدر") { isNeighbor = true; localStorage.setItem('isNbr', 'true'); setNeighborUI(); closeModal(); showToast("حي بدر مفعل ✅"); } }
-        function setNeighborUI() { document.getElementById('nbrBtn').classList.replace('from-blue-700', 'from-emerald-600'); document.getElementById('nbrLabel').innerText = "توصيل مجاني ✅"; }
+        function setNeighborUI() { document.getElementById('nbrBtn').classList.replace('from-blue-700', 'from-emerald-600'); document.getElementById('nbrLabel').innerText = "توصيل مجاني مفعل ✅"; }
         function closeModal() { document.getElementById('mainModal').style.display = 'none'; }
     </script>
 </body>
