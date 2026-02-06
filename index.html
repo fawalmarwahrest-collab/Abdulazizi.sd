@@ -76,10 +76,10 @@
     </div>
 
     <nav class="fixed bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-md flex justify-around items-center z-[1100] px-6 border-t border-slate-100">
-        <a href="https://maps.app.goo.gl/oFpmuJr9Azu2Cbx9A" class="flex flex-col items-center gap-1 text-slate-400">
+        <a href="https://maps.app.goo.gl/3" class="flex flex-col items-center gap-1 text-slate-400">
             <i class="fa-solid fa-map-pin text-xl"></i><span class="text-[9px] font-black">موقعنا</span>
         </a>
-        <button id="pwaInstallBtn" onclick="handleInstallClick()" class="w-16 h-16 bg-blue-700 text-white rounded-full -mt-10 border-[5px] border-white shadow-2xl flex flex-col items-center justify-center transform active:scale-90 transition">
+        <button id="pwaInstallBtn" onclick="handleInstall()" class="w-16 h-16 bg-blue-700 text-white rounded-full -mt-10 border-[5px] border-white shadow-2xl flex flex-col items-center justify-center transform active:scale-90 transition">
             <i class="fa-solid fa-download text-xl"></i>
             <span class="text-[7px] font-black mt-1">تثبيت</span>
         </button>
@@ -112,7 +112,7 @@
         let isNeighbor = localStorage.getItem('isNbr') === 'true';
         let currentCategory = "الوجبات";
         let activeItemId = null;
-        let backPressedOnce = false;
+        let deferredPrompt;
 
         function showToast(text) {
             const toast = document.getElementById("customToast");
@@ -122,19 +122,34 @@
 
         window.onload = () => {
             renderTabs(); renderItems(); updateCartDisplay(); if(isNeighbor) setNeighborUI();
+            
+            // تهيئة نظام التثبيت
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+            });
+            
+            // نظام الرجوع بالهاتف
             history.pushState(null, null, window.location.pathname);
             window.addEventListener('popstate', function () {
                 if (document.getElementById('mainModal').style.display === 'flex') {
                     closeModal(); history.pushState(null, null, window.location.pathname);
                 } else {
-                    if (!backPressedOnce) {
-                        backPressedOnce = true; showToast("اضغط مرة أخرى للخروج 🚪");
-                        history.pushState(null, null, window.location.pathname);
-                        setTimeout(() => { backPressedOnce = false; }, 2000);
-                    } else { window.history.back(); }
+                    history.pushState(null, null, window.location.pathname);
+                    showToast("للحصول على أفضل تجربة، ثبت التطبيق 📱");
                 }
             });
         };
+
+        async function handleInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') deferredPrompt = null;
+            } else {
+                showToast("التطبيق مثبت أو متصفحك لا يدعم التثبيت المباشر ✅");
+            }
+        }
 
         function renderTabs() {
             const tabs = document.getElementById('categoryTabs');
@@ -169,14 +184,16 @@
         }
         function toggleItem(id) { activeItemId = (activeItemId === id) ? null : id; renderItems(); }
         function getSizeName(s) { return {s:'صغير', m:'وسط', l:'كبير', local:'محلي', samoli:'صامولي', fatira:'فطيرة'}[s] || s; }
+        
         function updateQty(id, delta, name, price, size = 'default') {
             const key = `${id}-${size}`; const idx = cart.findIndex(i => i.key === key);
             if (idx > -1) { cart[idx].qty += delta; if (cart[idx].qty <= 0) cart.splice(idx, 1); }
             else if (delta > 0) { cart.push({ id, key, name: size !== 'default' ? `${name} (${getSizeName(size)})` : name, price, qty: 1, size }); }
             updateCartDisplay(); 
-            if(document.getElementById('mainModal').style.display === 'flex' && document.getElementById('cartRef')) { openCartModal(); }
+            if(document.getElementById('mainModal').style.display === 'flex' && document.getElementById('cartRefCheck')) { openCartModal(); }
             renderItems();
         }
+
         function getQty(id, size) { const item = cart.find(i => i.key === `${id}-${size}`); return item ? item.qty : 0; }
         function updateCartDisplay() {
             const count = cart.reduce((s, i) => s + i.qty, 0);
@@ -189,13 +206,13 @@
         function openCartModal() {
             const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
             document.getElementById('modalContent').innerHTML = `
-                <div id="cartRef">
+                <div id="cartRefCheck">
                     <div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-black">مراجعة طلبي</h2><button onclick="saveAsFavorite()" class="bg-red-50 text-red-600 px-4 py-2 rounded-2xl font-bold text-xs">❤️ مفضل</button></div>
                     <div class="space-y-4 mb-8">${cart.map(i => `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-3xl"><div><h4 class="font-black">${i.name}</h4><p class="text-xs text-blue-600">${i.price * i.qty}﷼</p></div><div class="flex items-center gap-3"><button onclick="updateQty(${i.id}, -1, '', 0, '${i.size}')" class="w-9 h-9 bg-white text-red-500 rounded-xl shadow-sm font-black">-</button><span class="font-black">${i.qty}</span><button onclick="updateQty(${i.id}, 1, '', 0, '${i.size}')" class="w-9 h-9 bg-blue-700 text-white rounded-xl shadow-sm font-black">+</button></div></div>`).join('')}</div>
                     <div class="bg-blue-50/50 p-6 rounded-[35px] space-y-4 mb-6">
                         ${isNeighbor ? `<input type="text" id="custName" placeholder="الاسم" value="${localStorage.getItem('u_name')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><input type="text" id="custLoc" placeholder="رقم المنزل" value="${localStorage.getItem('u_loc')||''}" class="w-full p-4 rounded-2xl bg-white shadow-sm outline-none font-bold">` : ''}
                         <div class="grid grid-cols-2 gap-2">
-                            ${!isNeighbor ? `<select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري">🥡 سفري</option><option value="محلي">🍽️ محلي</option></select>` : ''}
+                            ${!isNeighbor ? `<select id="oType" class="p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="سفري 🥡">🥡 سفري</option><option value="محلي 🍽️">🍽️ محلي</option></select>` : ''}
                             <select id="payWay" class="${isNeighbor?'col-span-2':'col-span-1'} p-4 rounded-2xl bg-white shadow-sm outline-none font-bold"><option value="كاش 💵">كاش 💵</option><option value="شبكة 💳">شبكة 💳</option></select>
                         </div>
                     </div>
