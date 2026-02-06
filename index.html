@@ -28,6 +28,7 @@
         .cart-badge { animation: pop 0.3s ease-out; }
         @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
         
+        /* تنسيق الإشعار العصري */
         #toast {
             visibility: hidden;
             min-width: 250px;
@@ -42,6 +43,7 @@
             bottom: 30px;
             transform: translateX(-50%);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-weight: bold;
         }
         #toast.show {
             visibility: visible;
@@ -160,7 +162,7 @@
     </div>
 
     <div id="neighborModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl border-2 border-blue-500 animate-bounce-in">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl border-2 border-blue-500">
             <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-truck text-blue-600 text-3xl"></i>
             </div>
@@ -168,7 +170,7 @@
             <p class="text-gray-600 text-sm mb-6 leading-relaxed">أهلاً بزبوننا الغالي من سكان حي بدر.. فعل ميزة التوصيل المجاني للطلبات فوق 50 ريال.</p>
             <input type="text" id="neighborCode" placeholder="أدخل كود المنطقة (إختياري)" class="w-full border-2 rounded-xl p-3 mb-4 outline-none focus:border-blue-600 text-center font-bold">
             <div class="flex gap-3">
-                <button onclick="this.parentElement.parentElement.parentElement.classList.add('hidden')" class="flex-1 py-3 text-gray-400 font-bold">إلغاء</button>
+                <button onclick="document.getElementById('neighborModal').classList.add('hidden')" class="flex-1 py-3 text-gray-400 font-bold">إلغاء</button>
                 <button onclick="activateNeighbor()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-95 transition-all">تفعيل الميزة</button>
             </div>
         </div>
@@ -177,27 +179,35 @@
     <div id="printArea" class="hidden text-black font-mono"></div>
 
     <script>
+        // الأصناف الكاملة كما هي في ملفك الأصلي دون أي حذف
         const DB = [
             { id: 1, name: "فول مروه سادة", price: 9, cat: "فول", img: "🍲" },
             { id: 2, name: "فول مروه بالسمن", price: 11, cat: "فول", img: "🥣" },
             { id: 3, name: "فول مروه بزيت الزيتون", price: 11, cat: "فول", img: "🫒" },
             { id: 4, name: "فول مروه بالتونة", price: 15, cat: "فول", img: "🐟" },
             { id: 5, name: "فول مروه ملوكي", price: 18, cat: "فول", img: "👑" },
-            
-            { id: 6, name: "مطبق مروه مالح", price: 9, cat: "مطبق", img: "🥞" },
-            { id: 7, name: "مطبق مروه خضار", price: 10, cat: "مطبق", img: "🥗" },
-            { id: 8, name: "مطبق مروه ملوكي", price: 15, cat: "مطبق", img: "🌟" },
-            
-            { id: 9, name: "معصوب مروه سادة", price: 9, cat: "معصوب", img: "🍌" },
-            { id: 10, name: "معصوب مروه ملكي", price: 18, cat: "معصوب", img: "💎" },
-            { id: 11, name: "عريكة مروه دبل", price: 22, cat: "معصوب", img: "🔥" }
+            { id: 6, name: "فول قلابة سادة", price: 9, cat: "فول", img: "🥘" },
+            { id: 7, name: "عدس مروه سادة", price: 9, cat: "عدس", img: "🥣" },
+            { id: 8, name: "عدس مروه ملوكي", price: 18, cat: "عدس", img: "✨" },
+            { id: 9, name: "شكشوكة مروه", price: 11, cat: "بيض", img: "🍳" },
+            { id: 10, name: "بيض عيون", price: 9, cat: "بيض", img: "🍳" },
+            { id: 11, name: "لحسة مروه", price: 18, cat: "بيض", img: "🧀" },
+            { id: 12, name: "كبدة غنم بلدي", price: 24, cat: "لحوم", img: "🥩" },
+            { id: 13, name: "تقاطيع مروه", price: 20, cat: "لحوم", img: "🔥" },
+            { id: 14, name: "مطبق مروه مالح", price: 9, cat: "مطبق", img: "🥞" },
+            { id: 15, name: "مطبق مروه خضار", price: 10, cat: "مطبق", img: "🥗" },
+            { id: 16, name: "مطبق مروه ملوكي", price: 15, cat: "مطبق", img: "🌟" },
+            { id: 17, name: "معصوب مروه سادة", price: 9, cat: "معصوب", img: "🍌" },
+            { id: 18, name: "معصوب مروه ملكي", price: 18, cat: "معصوب", img: "💎" },
+            { id: 19, name: "عريكة مروه دبل", price: 22, cat: "معصوب", img: "🔥" },
+            { id: 20, name: "عريكة مروه ملوكي", price: 26, cat: "معصوب", img: "🏆" }
         ];
 
         let cart = [];
         let currentCat = "الكل";
         let isNeighbor = false;
 
-        // Custom Toast Notification
+        // وظيفة الإشعار العصري
         function showToast(text) {
             const toast = document.getElementById("toast");
             toast.innerText = text;
@@ -205,7 +215,7 @@
             setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        // Back Button Logic
+        // منطق زر الرجوع
         function handleBack() {
             if (!document.getElementById('cartSidebar').classList.contains('hidden')) {
                 toggleCart();
@@ -258,7 +268,6 @@
                             <i class="fas fa-plus text-xs"></i>
                         </button>
                     </div>
-                    ${cart.find(c=>c.id===i.id)?`<span class="absolute top-2 left-2 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">مضاف</span>`:''}
                 </div>
             `).join('');
         }
@@ -268,9 +277,7 @@
             const inCart = cart.find(c => c.id === id);
             if (inCart) inCart.qty++;
             else cart.push({ ...item, qty: 1 });
-            
             updateCartDisplay();
-            renderItems();
             showToast(`تمت إضافة ${item.name} للسلة`);
         }
 
@@ -278,7 +285,6 @@
             const list = document.getElementById('cartItems');
             const count = document.getElementById('cartCount');
             const total = document.getElementById('cartTotal');
-            
             const totalQty = cart.reduce((s, i) => s + i.qty, 0);
             const totalCash = cart.reduce((s, i) => s + (i.price * i.qty), 0);
 
@@ -286,8 +292,8 @@
             count.classList.toggle('hidden', totalQty === 0);
             total.innerText = totalCash + "﷼";
 
-            list.innerHTML = cart.length ? cart.map(i => `
-                <div class="flex items-center justify-between bg-white p-3 rounded-2xl border-b border-gray-100 animate-slide-right">
+            list.innerHTML = cart.map(i => `
+                <div class="flex items-center justify-between bg-white p-3 rounded-2xl border-b">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-xl">${i.img}</div>
                         <div>
@@ -301,12 +307,7 @@
                         <button onclick="changeQty(${i.id}, 1)" class="w-6 h-6 flex items-center justify-center text-blue-600"><i class="fas fa-plus text-[10px]"></i></button>
                     </div>
                 </div>
-            `).join('') : `
-                <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
-                    <i class="fas fa-shopping-basket text-6xl mb-4"></i>
-                    <p class="font-bold">السلة فارغة حالياً</p>
-                </div>
-            `;
+            `).join('');
         }
 
         function changeQty(id, n) {
@@ -314,7 +315,6 @@
             item.qty += n;
             if (item.qty <= 0) cart = cart.filter(c => c.id !== id);
             updateCartDisplay();
-            renderItems();
         }
 
         function toggleCart() {
@@ -324,26 +324,25 @@
         function activateNeighbor() {
             isNeighbor = true;
             document.getElementById('neighborModal').classList.add('hidden');
-            showToast("تم تفعيل ميزة سكان حي بدر بنجاح ✅");
+            showToast("تم تفعيل ميزة سكان حي بدر ✅");
         }
 
         function confirmAndSend() {
             if (!cart.length) return showToast("السلة فارغة!");
             saveToHistory();
-            const info = isNeighbor ? `%0A📍 *العنوان:* سكان حي بدر (${document.getElementById('neighborCode').value || 'بدون كود'})` : '';
+            const info = isNeighbor ? `%0A📍 *العنوان:* سكان حي بدر` : '';
             const lastLog = JSON.parse(localStorage.getItem('m_logs'))[0];
-            let msg = `*طلب جديد - فوال مروه*%0A--------------------------%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${isNeighbor?'توصيل حي بدر':document.getElementById('oType').value}%0A💳 *الدفع:* ${document.getElementById('payWay').value}${info}%0A--------------------------%0A`;
+            let msg = `*طلب جديد - فوال مروه*%0A🆔 *رقم الطلب:* ${lastLog.id}%0A📢 *النوع:* ${document.getElementById('oType').value}${info}%0A--------------------------%0A`;
             cart.forEach(i => msg += `• ${i.name} [${i.qty}] = ${i.price * i.qty}﷼%0A`);
             msg += `--------------------------%0A💰 *الإجمالي: ${cart.reduce((s,i)=>s+(i.price*i.qty),0)}﷼*`;
             window.location.href = `https://wa.me/966530195433?text=${msg}`;
-            cart = []; updateCartDisplay(); toggleCart(); renderItems();
+            cart = []; updateCartDisplay(); toggleCart();
         }
 
         function saveToHistory() {
             let logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
             const generateID = () => Math.floor(100000 + Math.random() * 900000);
             let newID = generateID();
-            while(logs.some(l => l.id === newID)) { newID = generateID(); }
             logs.unshift({ id: newID, date: new Date().toLocaleString('ar-SA'), items: [...cart], total: cart.reduce((s,i)=>s+(i.price*i.qty),0) });
             localStorage.setItem('m_logs', JSON.stringify(logs.slice(0, 30)));
         }
@@ -352,24 +351,22 @@
             const modal = document.getElementById('historyModal');
             const content = document.getElementById('historyContent');
             const logs = JSON.parse(localStorage.getItem('m_logs') || '[]');
-            
             modal.classList.remove('hidden');
-            content.innerHTML = logs.length ? logs.map(l => `
-                <div class="bg-white p-4 rounded-2xl border-r-4 border-blue-900 shadow-sm relative overflow-hidden">
+            content.innerHTML = logs.map(l => `
+                <div class="bg-white p-4 rounded-2xl border-r-4 border-blue-900 shadow-sm">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <span class="text-[10px] font-bold text-gray-400 block">${l.date}</span>
+                            <span class="text-[10px] text-gray-400 block">${l.date}</span>
                             <span class="font-black text-blue-900 text-sm">طلب #${l.id}</span>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="printBill(${l.id})" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-print text-xs"></i></button>
-                            <button onclick="saveAsImg(${l.id})" class="text-green-600 bg-green-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-image text-xs"></i></button>
                         </div>
                     </div>
                     <div class="text-[10px] text-gray-600 mb-2 border-t pt-2">${l.items.map(i => `${i.name} (${i.qty})`).join(' ، ')}</div>
                     <div class="text-right font-black text-blue-900 text-sm">${l.total}﷼</div>
                 </div>
-            `).join('') : `<div class="p-10 text-center text-gray-400"><i class="fas fa-folder-open text-4xl mb-2"></i><p>لا توجد طلبات سابقة</p></div>`;
+            `).join('');
         }
 
         function closeHistory() {
@@ -379,7 +376,7 @@
         function checkAdmin() {
             const pin = prompt("أدخل كلمة مرور الإدارة:");
             if (pin === "123456Aa") {
-                if (confirm("هل تريد مسح جميع سجلات الطلبات؟")) {
+                if (confirm("هل تريد مسح السجلات؟")) {
                     localStorage.removeItem('m_logs');
                     openHistory();
                 }
@@ -392,40 +389,23 @@
             const log = JSON.parse(localStorage.getItem('m_logs')).find(l => l.id === id);
             const area = document.getElementById('printArea');
             area.innerHTML = `
-                <div style="text-align:center; padding-bottom:10px; border-bottom:1px dashed #000">
-                    <h2 style="margin:0">فوال مروه</h2>
-                    <p style="font-size:12px; margin:5px 0">فاتورة طلب #${log.id}</p>
-                    <p style="font-size:10px">${log.date}</p>
+                <div style="text-align:center">
+                    <h2>فوال مروه</h2>
+                    <p>طلب #${log.id}</p>
+                    <p>${log.date}</p>
                 </div>
-                <table style="width:100%; font-size:12px; margin:10px 0; border-bottom:1px dashed #000">
+                <hr>
+                <table style="width:100%">
                     ${log.items.map(i => `<tr><td>${i.name} [${i.qty}]</td><td style="text-align:left">${i.price*i.qty}﷼</td></tr>`).join('')}
                 </table>
-                <div style="text-align:left; font-weight:bold; font-size:14px">الإجمالي: ${log.total}﷼</div>
-                <div style="text-align:center; margin-top:10px">
-                    <svg id="barcode"></svg>
-                    <p style="font-size:10px">شكراً لزيارتكم</p>
-                </div>
+                <hr>
+                <div style="text-align:left; font-weight:bold">الإجمالي: ${log.total}﷼</div>
             `;
-            JsBarcode("#barcode", log.id.toString(), { height: 30, fontSize: 12 });
             window.print();
         }
 
-        async function saveAsImg(id) {
-            await printBill(id);
-            const area = document.getElementById('printArea');
-            area.classList.remove('hidden');
-            html2canvas(area).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `bill-${id}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                area.classList.add('hidden');
-                showToast("تم حفظ الفاتورة كصورة 🖼️");
-            });
-        }
-
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log("Service Worker Registered"));
+            navigator.serviceWorker.register('sw.js').then(() => console.log("SW Registered"));
         }
     </script>
 </body>
